@@ -1,0 +1,160 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Feedback DApp</title>
+    <script src="https://cdn.jsdelivr.net/npm/web3/dist/web3.min.js"></script>
+</head>
+<body>
+    <h1>Feedback DApp</h1>
+    <form id="feedbackForm">
+        <input type="text" id="name" placeholder="Your Name" required>
+        <textarea id="message" placeholder="Your Feedback" required></textarea>
+        <button type="submit">Submit Feedback</button>
+    </form>
+    <ul id="feedbackList"></ul>
+
+    <script>
+        // Check if MetaMask is installed
+        if (typeof window.ethereum !== 'undefined') {
+            const web3 = new Web3(window.ethereum);
+            // Request account access
+            window.ethereum.request({ method: 'eth_requestAccounts' })
+                .then(() => {
+                    console.log("MetaMask is connected");
+                    loadFeedback(); // Load feedback after connection
+                })
+                .catch((error) => {
+                    console.error("User denied account access", error);
+                });
+
+            // Set up contract
+            const contractAddress = '0x4860Fd272a0238B68b3c2B0F380b1228E0D91014'; 
+            const contractABI = [
+                // Your ABI goes here
+                {
+                    "inputs": [
+                        {
+                            "internalType": "uint256",
+                            "name": "",
+                            "type": "uint256"
+                        }
+                    ],
+                    "name": "feedbackEntries",
+                    "outputs": [
+                        {
+                            "internalType": "string",
+                            "name": "name",
+                            "type": "string"
+                        },
+                        {
+                            "internalType": "string",
+                            "name": "message",
+                            "type": "string"
+                        }
+                    ],
+                    "stateMutability": "view",
+                    "type": "function"
+                },
+                {
+                    "inputs": [
+                        {
+                            "internalType": "string",
+                            "name": "_name",
+                            "type": "string"
+                        },
+                        {
+                            "internalType": "string",
+                            "name": "_message",
+                            "type": "string"
+                        }
+                    ],
+                    "name": "submitFeedback",
+                    "outputs": [],
+                    "stateMutability": "nonpayable",
+                    "type": "function"
+                },
+                {
+                    "inputs": [],
+                    "name": "getFeedbackCount",
+                    "outputs": [
+                        {
+                            "internalType": "uint256",
+                            "name": "",
+                            "type": "uint256"
+                        }
+                    ],
+                    "stateMutability": "view",
+                    "type": "function"
+                },
+                {
+                    "inputs": [
+                        {
+                            "internalType": "uint256",
+                            "name": "index",
+                            "type": "uint256"
+                        }
+                    ],
+                    "name": "getFeedback",
+                    "outputs": [
+                        {
+                            "internalType": "string",
+                            "name": "",
+                            "type": "string"
+                        },
+                        {
+                            "internalType": "string",
+                            "name": "",
+                            "type": "string"
+                        }
+                    ],
+                    "stateMutability": "view",
+                    "type": "function"
+                }
+            ];
+            const contract = new web3.eth.Contract(contractABI, contractAddress);
+
+            // Event listeners for account and network changes
+            window.ethereum.on('accountsChanged', function (accounts) {
+                console.log("Account changed to: " + accounts[0]);
+            });
+
+            window.ethereum.on('networkChanged', function (networkId) {
+                console.log("Network changed to: " + networkId);
+            });
+
+            // Submit Feedback Function
+            async function submitFeedback(name, message) {
+                const accounts = await window.ethereum.request({ method: 'eth_requestAccounts' });
+                await contract.methods.submitFeedback(name, message).send({ from: accounts[0] });
+                loadFeedback(); // Reload feedback after submission
+            }
+
+            // Load Feedback Function
+            async function loadFeedback() {
+                const feedbackCount = await contract.methods.getFeedbackCount().call();
+                const feedbackList = document.getElementById('feedbackList');
+                feedbackList.innerHTML = ''; // Clear existing list
+
+                for (let i = 0; i < feedbackCount; i++) {
+                    const feedback = await contract.methods.getFeedback(i).call();
+                    const li = document.createElement('li');
+                    li.textContent = `${feedback[0]}: ${feedback[1]}`;
+                    feedbackList.appendChild(li);
+                }
+            }
+
+            // Handle Form Submission
+            document.getElementById('feedbackForm').addEventListener('submit', function(event) {
+                event.preventDefault();
+                const name = document.getElementById('name').value;
+                const message = document.getElementById('message').value;
+                submitFeedback(name, message);
+            });
+        } else {
+            console.error("MetaMask is not installed");
+        }
+    </script> 
+</body>
+</html>
